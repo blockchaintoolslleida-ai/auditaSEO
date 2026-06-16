@@ -8,6 +8,58 @@
  */
 
 import { config } from "./config";
+import prisma from "./db";
+
+// --- Control de uso mensual ---
+const SERPER_MONTHLY_LIMIT = 2500;
+let currentMonthUsage = 0;
+let usageChecked = false;
+
+function getCurrentMonth(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+async function checkAndIncrementUsage(): Promise<boolean> {
+  const month = getCurrentMonth();
+
+  // Caché en memoria para no consultar la DB en cada llamada
+  if (usageChecked) {
+    if (currentMonthUsage >= SERPER_MONTHLY_LIMIT) {
+      console.warn(`[Serper] ⚠️ Límite mensual alcanzado: ${currentMonthUsage}/${SERPER_MONTHLY_LIMIT}`);
+      return false;
+    }
+    currentMonthUsage++;
+    return true;
+  }
+
+  // Primera llamada del mes: consultar DB con upsert (evita race condition)
+  const counter = await prisma.usageCounter.upsert({
+    where: { api_month: { api: "serper", month } },
+    update: {}, // No actualizar aquí, lo haremos al final
+    create: { api: "serper", month, count: 0, limit: SERPER_MONTHLY_LIMIT },
+  });
+
+  currentMonthUsage = counter.count;
+  usageChecked = true;
+
+  if (currentMonthUsage >= SERPER_MONTHLY_LIMIT) {
+    console.warn(`[Serper] ⚠️ Límite mensual alcanzado: ${currentMonthUsage}/${SERPER_MONTHLY_LIMIT}`);
+    return false;
+  }
+
+  currentMonthUsage++;
+  return true;
+}
+
+async function persistUsage(): Promise<void> {
+  const month = getCurrentMonth();
+  await prisma.usageCounter.upsert({
+    where: { api_month: { api: "serper", month } },
+    update: { count: currentMonthUsage },
+    create: { api: "serper", month, count: currentMonthUsage, limit: SERPER_MONTHLY_LIMIT },
+  });
+}
 
 const SERPER_URL = "https://google.serper.dev/search";
 
@@ -29,6 +81,12 @@ interface SerperResponse {
 async function searchKeyword(keyword: string): Promise<SerperResult[]> {
   if (!config.serperApiKey) {
     console.warn("[Serper] API key not configured, returning mock data");
+    return [];
+  }
+
+  // Control de límite mensual
+  if (!(await checkAndIncrementUsage())) {
+    console.warn(`[Serper] Usando mock para "${keyword}" — límite alcanzado`);
     return [];
   }
 
@@ -151,6 +209,10 @@ export async function analyzeKeywords(
     domain: c.domain,
     position: Math.round(c.avgPosition),
   }));
+
+  // Persistir contador de uso a la DB
+  await persistUsage();
+  console.log(`[Serper] Llamadas este mes: ${currentMonthUsage}/${SERPER_MONTHLY_LIMIT}`);
 
   return { rankings, competitors };
 }

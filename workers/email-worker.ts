@@ -7,6 +7,8 @@
  * emails de seguimiento programados (día 3, 7, 14).
  */
 
+import "dotenv/config";
+
 import { Worker } from "bullmq";
 import { config } from "../src/lib/config";
 import { sendScheduledEmail } from "../src/lib/emailSender";

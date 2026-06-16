@@ -123,3 +123,17 @@ model EmailLog {
   @@index([leadId])
   @@index([type])
 }
+
+// -----------------------------------------------------------
+// UsageCounter: control de llamadas API (Serper, DeepSeek)
+// -----------------------------------------------------------
+model UsageCounter {
+  id        String   @id @default(uuid())
+  api       String   // "serper" | "deepseek" | "pagespeed"
+  month     String   // "2026-06"
+  count     Int      @default(0)
+  limit     Int      @default(2500)
+  updatedAt DateTime @updatedAt
+
+  @@unique([api, month])
+}

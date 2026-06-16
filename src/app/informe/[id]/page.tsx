@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import type { AuditResult } from "@/types";
 import { getScoreColor, formatDate } from "@/lib/utils";
+import ScoreRadarChart from "@/components/ScoreRadarChart";
+import KeywordsBarChart from "@/components/KeywordsBarChart";
 
 export default function InformePage() {
   const params = useParams();
@@ -97,7 +99,7 @@ export default function InformePage() {
           </h1>
           <p className="text-muted-foreground mb-6">Sector: {data.sector}</p>
 
-          <div className="flex justify-center gap-8 flex-wrap">
+          <div className="flex justify-center gap-8 flex-wrap items-center">
             {/* Score circle */}
             <div className="text-center">
               <div
@@ -108,6 +110,11 @@ export default function InformePage() {
               </div>
               <p className="mt-2 font-semibold">{scoreInfo.label}</p>
               <p className="text-xs text-muted-foreground">Puntuación global</p>
+            </div>
+
+            {/* Radar Chart */}
+            <div className="w-64">
+              <ScoreRadarChart scores={data.scores} />
             </div>
 
             {/* Category scores */}
@@ -126,7 +133,9 @@ export default function InformePage() {
             <TrendingUp className="w-5 h-5 text-accent" />
             Posiciones en Google
           </h2>
-          <div className="overflow-x-auto">
+          {/* Gráfico de barras */}
+          <KeywordsBarChart rankings={data.rankings} />
+          <div className="overflow-x-auto mt-6">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">

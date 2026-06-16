@@ -9,6 +9,8 @@
  * Para producción: Railway, Heroku, VPS con PM2, etc.
  */
 
+import "dotenv/config";
+
 import { Worker } from "bullmq";
 import { config } from "../src/lib/config";
 import { processAuditJob } from "../src/lib/auditWorker";

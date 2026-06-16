@@ -36,6 +36,11 @@ Thumbs.db
 *.log
 npm-debug.log*
 
+# Playwright MCP screenshots
+.playwright-mcp/
+*.png
+*.pdf
+
 # Misc
 coverage/
 .cache/
