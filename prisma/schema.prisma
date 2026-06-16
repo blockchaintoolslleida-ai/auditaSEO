@@ -1,0 +1,125 @@
+// =============================================================
+// AuditaSEO - Schema de base de datos (Prisma + PostgreSQL)
+// =============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------
+// Lead: representa a un usuario que solicitó una auditoría
+// -----------------------------------------------------------
+model Lead {
+  id          String   @id @default(uuid())
+  email       String
+  url         String
+  status      String   @default("pending") // pending | processing | completed | error
+  auditResult Json?    // Resultado completo de la auditoría en JSON
+  pdfUrl      String?  // URL del PDF generado
+  score       Int?     // Puntuación SEO global (0-100)
+  sector      String?  // Sector detectado por DeepSeek
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  sentAt      DateTime? // Cuándo se envió el email al usuario
+  openedAt    DateTime? // Cuándo abrió el email
+  convertedAt DateTime? // Cuándo se convirtió (agendó consultoría o contrató)
+  notes       String?  // Notas internas del equipo
+
+  rankings        AuditRanking[]
+  errors          AuditError[]
+  recommendations AuditRecommendation[]
+  competitors     Competitor[]
+  emailLogs       EmailLog[]
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// -----------------------------------------------------------
+// AuditRanking: posiciones de keywords
+// -----------------------------------------------------------
+model AuditRanking {
+  id       String @id @default(uuid())
+  leadId   String
+  keyword  String
+  position Int
+  url      String?
+  change   Int    @default(0)  // Cambio respecto al período anterior
+  trend    String @default("stable") // up | down | stable
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+}
+
+// -----------------------------------------------------------
+// AuditError: errores encontrados en la auditoría
+// -----------------------------------------------------------
+model AuditError {
+  id          String @id @default(uuid())
+  leadId      String
+  type        String // technical | content | usability | performance
+  category    String // meta | heading | image | link | mobile | speed | https
+  description String
+  suggestion  String
+  priority    String @default("medium") // critical | high | medium | low
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([type])
+}
+
+// -----------------------------------------------------------
+// AuditRecommendation: recomendaciones priorizadas
+// -----------------------------------------------------------
+model AuditRecommendation {
+  id          String @id @default(uuid())
+  leadId      String
+  title       String
+  description String
+  difficulty  String // easy | medium | hard
+  impact      String // high | medium | low
+  time        String // Tiempo estimado (ej: "2-4 horas", "1 semana")
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+}
+
+// -----------------------------------------------------------
+// Competitor: competidores detectados
+// -----------------------------------------------------------
+model Competitor {
+  id       String  @id @default(uuid())
+  leadId   String
+  domain   String
+  position Float   @default(0) // Posición media en las keywords analizadas
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+}
+
+// -----------------------------------------------------------
+// EmailLog: registro de emails enviados
+// -----------------------------------------------------------
+model EmailLog {
+  id       String   @id @default(uuid())
+  leadId   String
+  type     String   // audit_report | follow_up_3 | follow_up_7 | follow_up_14
+  sentAt   DateTime @default(now())
+  openedAt DateTime?
+  error    String?  // Mensaje de error si falló el envío
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([type])
+}
