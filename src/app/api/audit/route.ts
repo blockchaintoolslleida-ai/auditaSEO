@@ -109,13 +109,10 @@ export async function POST(request: Request) {
       },
     });
 
-    // --- Encolar auditoría ---
-    try {
-      await enqueueAudit(lead.id, email, normalizedUrl);
-    } catch (queueError) {
-      console.error("[API] Queue error:", queueError);
-      // No fallamos la petición — el lead está creado, se puede reintentar
-    }
+    // --- Encolar auditoría (fire-and-forget, no bloquea la respuesta) ---
+    enqueueAudit(lead.id, email, normalizedUrl).catch((e) =>
+      console.error("[API] Queue error (non-blocking):", e.message)
+    );
 
     return NextResponse.json({
       auditId: lead.id,
