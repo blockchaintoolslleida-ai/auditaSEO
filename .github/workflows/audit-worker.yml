@@ -1,0 +1,46 @@
+name: Audit Worker
+
+# Procesa auditorías SEO pendientes cada 5 minutos
+# Consume ~2000 min/mes del límite gratuito de GitHub Actions
+
+on:
+  schedule:
+    - cron: "*/5 * * * *" # Cada 5 minutos
+  workflow_dispatch: # Permite ejecución manual
+
+jobs:
+  process-audits:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Process pending audits
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
+          PAGESPEED_API_KEY: ${{ secrets.PAGESPEED_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          NEXT_PUBLIC_APP_URL: https://audita-seo.vercel.app
+        run: |
+          # Procesar hasta 3 auditorías por ejecución
+          npx tsx workers/audit-worker.ts &
+          WORKER_PID=$!
+
+          # Darle 4 minutos para procesar
+          sleep 240
+
+          # Parar el worker
+          kill $WORKER_PID 2>/dev/null || true
+          echo "Worker finished"
