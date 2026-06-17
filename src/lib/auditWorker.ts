@@ -201,8 +201,10 @@ export async function processAuditJob(jobData: AuditJobData): Promise<void> {
     const informeUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/informe/${leadId}`;
     await sendScheduledEmail(leadId, email, "audit_report", informeUrl, domain);
 
-    // --- 14. Programar emails de seguimiento ---
-    await scheduleFollowUpEmails(leadId, email, informeUrl);
+    // --- 14. Programar emails de seguimiento (no bloquea si falla) ---
+    scheduleFollowUpEmails(leadId, email, informeUrl).catch((e) =>
+      console.error("[AuditWorker] Follow-up scheduling failed (non-critical):", e.message)
+    );
 
     console.log(`[AuditWorker] Audit completed for ${domain}. Score: ${globalScore}/100`);
 
