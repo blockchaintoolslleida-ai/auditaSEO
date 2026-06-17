@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -11,6 +11,7 @@ import {
   FileText,
   Lightbulb,
   ArrowRight,
+  Clock,
 } from "lucide-react";
 
 const PROCESSING_STEPS = [
@@ -20,13 +21,17 @@ const PROCESSING_STEPS = [
   { icon: Lightbulb, text: "Generando recomendaciones..." },
 ];
 
+const POLL_INTERVAL = 5000; // 5 segundos entre polls
+const MAX_POLL_TIME = 3 * 60 * 1000; // 3 minutos máximo de espera
+
 export default function GraciasContent() {
   const searchParams = useSearchParams();
   const auditId = searchParams.get("auditId");
   const [step, setStep] = useState(0);
-  const [status, setStatus] = useState<"processing" | "completed" | "error">(
-    "processing"
-  );
+  const [status, setStatus] = useState<
+    "processing" | "completed" | "error" | "timeout"
+  >("processing");
+  const pollStartRef = useRef(Date.now());
 
   // Rotar los mensajes de procesamiento
   useEffect(() => {
@@ -37,12 +42,18 @@ export default function GraciasContent() {
     return () => clearInterval(interval);
   }, [status]);
 
-  // Polling del estado de la auditoría
+  // Polling del estado de la auditoría (con timeout)
   useEffect(() => {
     if (!auditId) return;
 
     const checkStatus = async () => {
       try {
+        // Timeout: si llevamos más de MAX_POLL_TIME, mostramos fallback
+        if (Date.now() - pollStartRef.current > MAX_POLL_TIME) {
+          setStatus("timeout");
+          return;
+        }
+
         const response = await fetch(`/api/audit/status/${auditId}`);
         if (!response.ok) return;
         const data = await response.json();
@@ -56,7 +67,7 @@ export default function GraciasContent() {
       }
     };
 
-    const interval = setInterval(checkStatus, 5000);
+    const interval = setInterval(checkStatus, POLL_INTERVAL);
     checkStatus(); // Immediate first check
 
     return () => clearInterval(interval);
@@ -156,6 +167,32 @@ export default function GraciasContent() {
                   solicita otra auditoría
                 </Link>
               </p>
+            </div>
+          )}
+
+          {status === "timeout" && (
+            <div className="animate-fade-in space-y-8">
+              <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto">
+                <Clock className="w-10 h-10 text-amber-600" />
+              </div>
+
+              <div className="space-y-3">
+                <h1 className="text-2xl font-bold text-primary">
+                  Tu auditoría está en marcha
+                </h1>
+                <p className="text-muted-foreground">
+                  Está tardando un poco más de lo esperado. Te enviaremos el
+                  informe por email en cuanto esté listo. No hace falta que
+                  esperes aquí.
+                </p>
+              </div>
+
+              <Link
+                href="/"
+                className="inline-flex items-center gap-2 bg-primary text-white font-semibold py-3 px-6 rounded-xl hover:bg-primary-light transition"
+              >
+                Volver al inicio
+              </Link>
             </div>
           )}
 
