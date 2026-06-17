@@ -9,6 +9,8 @@ import prisma from "@/lib/db";
 import { enqueueAudit } from "@/lib/queue";
 import { isValidEmail, isValidUrl } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 // Schema de validación con Zod
 const auditRequestSchema = z.object({
   email: z

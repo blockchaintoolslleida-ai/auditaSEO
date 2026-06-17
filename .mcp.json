@@ -1,0 +1,11 @@
+{
+  "servers": {
+    "supabase": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${MCP_SUPABASE_API_KEY}"
+      }
+    }
+  }
+}

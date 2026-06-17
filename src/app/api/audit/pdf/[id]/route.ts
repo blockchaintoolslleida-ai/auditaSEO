@@ -5,8 +5,9 @@
 
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
-import { generateAuditPDF } from "@/lib/pdfGenerator";
 import type { AuditResult } from "@/types";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(
   _request: Request,
@@ -88,7 +89,8 @@ export async function GET(
       lighthouse: (lead.auditResult as Record<string, unknown>)?.lighthouse as AuditResult["lighthouse"],
     };
 
-    // Generar PDF
+    // Generar PDF (dynamic import para evitar error de build con puppeteer)
+    const { generateAuditPDF } = await import("@/lib/pdfGenerator");
     const pdfBuffer = await generateAuditPDF(result);
 
     const domain = lead.url.replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0] || "informe";

@@ -5,9 +5,7 @@ const nextConfig = {
       { protocol: 'https', hostname: '**' },
     ],
   },
-  experimental: {
-    serverComponentsExternalPackages: ['puppeteer', 'puppeteer-core'],
-  },
+  serverExternalPackages: ['puppeteer', 'puppeteer-core'],
 };
 
 module.exports = nextConfig;
