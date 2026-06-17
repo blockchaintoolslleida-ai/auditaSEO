@@ -15,6 +15,11 @@ function getConnection(): ConnectionOptions {
   return {
     url: config.redisUrl,
     maxRetriesPerRequest: null, // Requerido por BullMQ
+    connectTimeout: 10000, // 10s timeout para evitar bloqueos
+    retryStrategy: (times: number) => {
+      if (times > 2) return null; // Dejar de reintentar tras 2 intentos
+      return Math.min(times * 1000, 3000);
+    },
   };
 }
 
@@ -63,8 +68,16 @@ function getEmailQueue(): Queue {
  * Añade una auditoría a la cola para procesamiento en background.
  */
 export async function enqueueAudit(leadId: string, email: string, url: string) {
-  const queue = getAuditQueue();
-  return queue.add("run-audit", { leadId, email, url });
+  try {
+    const queue = getAuditQueue();
+    // Timeout de 8s para no bloquear la respuesta HTTP
+    await Promise.race([
+      queue.add("run-audit", { leadId, email, url }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Queue timeout")), 8000)),
+    ]);
+  } catch (error) {
+    console.error("[Queue] Failed to enqueue audit:", error);
+  }
 }
 
 /**
