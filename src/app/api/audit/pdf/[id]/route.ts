@@ -57,8 +57,9 @@ export async function GET(
     const domain = lead.url
       .replace(/^https?:\/\//, "")
       .replace(/^www\./, "")
-      .split("/")[0] || "informe";
-    const filename = `auditaseo-${domain}-${new Date().toISOString().split("T")[0]}.pdf`;
+      .split("/")[0]
+      .replace(/\.[^.]+$/, "") || "informe"; // quita TLD (.com, .es, .net, etc.)
+    const filename = `${domain}.pdf`;
 
     return new NextResponse(new Uint8Array(lead.pdfReport), {
       headers: {
