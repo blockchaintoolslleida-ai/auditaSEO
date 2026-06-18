@@ -56,11 +56,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Debug: devolver info (quitar en producción)
-  return new NextResponse(
-    `Auth debug: user="${user}" pass="${password}" expected="${adminUser}:${adminPass}" decoded="${decoded}" base64="${base64}"`,
-    { status: 401, headers: { "WWW-Authenticate": 'Basic realm="Admin Panel" charset="UTF-8"' } }
-  );
+  return new NextResponse("Invalid credentials", {
+    status: 401,
+    headers: {
+      "WWW-Authenticate": 'Basic realm="Admin Panel", charset="UTF-8"',
+    },
+  });
 }
 
 export const config = {
