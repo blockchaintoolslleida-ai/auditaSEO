@@ -43,29 +43,24 @@ export function middleware(request: NextRequest) {
     });
   }
 
-  try {
-    const base64 = authHeader.slice(6);
-    const decoded = base64Decode(base64);
-    const colonIndex = decoded.indexOf(":");
-    const user = decoded.slice(0, colonIndex);
-    const password = decoded.slice(colonIndex + 1);
+  const base64 = authHeader.slice(6);
+  const decoded = base64Decode(base64);
+  const colonIndex = decoded.indexOf(":");
+  const user = decoded.slice(0, colonIndex);
+  const password = decoded.slice(colonIndex + 1);
 
-    const adminUser = process.env.ADMIN_USER || "admin";
-    const adminPass = process.env.ADMIN_PASSWORD || "admin123";
+  const adminUser = process.env.ADMIN_USER || "admin";
+  const adminPass = process.env.ADMIN_PASSWORD || "admin123";
 
-    if (user === adminUser && password === adminPass) {
-      return NextResponse.next();
-    }
-  } catch {
-    // Invalid auth header
+  if (user === adminUser && password === adminPass) {
+    return NextResponse.next();
   }
 
-  return new NextResponse("Invalid credentials", {
-    status: 401,
-    headers: {
-      "WWW-Authenticate": 'Basic realm="Admin Panel", charset="UTF-8"',
-    },
-  });
+  // Debug: devolver info (quitar en producción)
+  return new NextResponse(
+    `Auth debug: user="${user}" pass="${password}" expected="${adminUser}:${adminPass}" decoded="${decoded}" base64="${base64}"`,
+    { status: 401, headers: { "WWW-Authenticate": 'Basic realm="Admin Panel" charset="UTF-8"' } }
+  );
 }
 
 export const config = {
