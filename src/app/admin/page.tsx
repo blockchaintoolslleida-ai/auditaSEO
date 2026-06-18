@@ -196,7 +196,7 @@ export default async function AdminPage() {
                             <Link href={`/informe/${lead.id}`} className="text-accent hover:underline" title="Ver informe">
                               <ExternalLink className="w-4 h-4" />
                             </Link>
-                            <a href={`/api/audit/pdf/${lead.id}`} className="text-primary hover:underline" title="Descargar PDF">
+                            <a href={`/api/audit/pdf/${lead.id}`} download className="text-primary hover:underline" title="Descargar PDF">
                               <Download className="w-4 h-4" />
                             </a>
                           </>

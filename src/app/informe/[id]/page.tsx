@@ -81,6 +81,7 @@ export default function InformePage() {
           </Link>
           <a
             href={`/api/audit/pdf/${id}`}
+            download
             className="flex items-center gap-2 text-sm bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-light transition"
           >
             <Download className="w-4 h-4" />
