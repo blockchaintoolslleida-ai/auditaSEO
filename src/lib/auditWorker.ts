@@ -192,6 +192,7 @@ export async function processAuditJob(jobData: AuditJobData): Promise<void> {
           score: globalScore,
           sector,
           auditResult: auditResult as unknown as object,
+          ...(pdfBuffer ? { pdfReport: pdfBuffer } : {}),
         },
       });
     });

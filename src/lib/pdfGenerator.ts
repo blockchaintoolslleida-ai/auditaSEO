@@ -148,12 +148,6 @@ function buildReportHTML(result: AuditResult): string {
 export async function generateAuditPDF(result: AuditResult): Promise<Buffer> {
   const html = buildReportHTML(result);
 
-  // En entornos sin Puppeteer (desarrollo), devolvemos un placeholder
-  if (process.env.VERCEL || process.env.NO_PUPPETEER) {
-    console.warn("[PDF] Puppeteer not available, returning HTML as buffer");
-    return Buffer.from(html, "utf-8");
-  }
-
   try {
     // Import dinámico para que no falle en entornos sin Puppeteer
     const puppeteer = await import("puppeteer");
@@ -175,8 +169,9 @@ export async function generateAuditPDF(result: AuditResult): Promise<Buffer> {
     await browser.close();
     return Buffer.from(pdf);
   } catch (error) {
-    console.error("[PDF] Error generating PDF:", error);
-    // Fallback: devolver el HTML
-    return Buffer.from(html, "utf-8");
+    console.error("[PDF] Error generating PDF with Puppeteer:", error);
+    throw new Error(
+      `PDF generation failed: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
   }
 }

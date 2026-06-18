@@ -20,7 +20,8 @@ model Lead {
   url         String
   status      String   @default("pending") // pending | processing | completed | error
   auditResult Json?    // Resultado completo de la auditoría en JSON
-  pdfUrl      String?  // URL del PDF generado
+  pdfReport   Bytes?   // PDF binario generado por el worker
+  pdfUrl      String?  // URL del PDF generado (legacy)
   score       Int?     // Puntuación SEO global (0-100)
   sector      String?  // Sector detectado por DeepSeek
   createdAt   DateTime @default(now())

@@ -1,11 +1,11 @@
 /**
  * GET /api/audit/pdf/[id]
- * Descarga el PDF del informe.
+ * Sirve el PDF del informe desde la base de datos.
+ * El PDF lo genera el worker (GitHub Actions) y se guarda en lead.pdfReport.
  */
 
 import { NextResponse } from "next/server";
 import prisma from "@/lib/db";
-import type { AuditResult } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -25,11 +25,11 @@ export async function GET(
 
     const lead = await prisma.lead.findUnique({
       where: { id },
-      include: {
-        rankings: { orderBy: { position: "asc" } },
-        errors: { orderBy: [{ priority: "asc" }, { type: "asc" }] },
-        recommendations: true,
-        competitors: { orderBy: { position: "asc" } },
+      select: {
+        id: true,
+        status: true,
+        pdfReport: true,
+        url: true,
       },
     });
 
@@ -42,71 +42,35 @@ export async function GET(
 
     if (lead.status !== "completed") {
       return NextResponse.json(
-        { error: "El informe aún no está disponible" },
+        { error: "El informe aún no está disponible. La auditoría sigue en proceso." },
         { status: 202 }
       );
     }
 
-    // Construir el resultado
-    const result: AuditResult = {
-      id: lead.id,
-      email: lead.email,
-      url: lead.url,
-      score: lead.score || 0,
-      sector: lead.sector || "No detectado",
-      createdAt: lead.createdAt.toISOString(),
-      scores: (lead.auditResult as Record<string, unknown>)?.scores as AuditResult["scores"] || {
-        ranking: 0,
-        technical: 0,
-        content: 0,
-        backlinks: 0,
-      },
-      rankings: lead.rankings.map((r) => ({
-        keyword: r.keyword,
-        position: r.position,
-        url: r.url,
-        change: r.change,
-        trend: r.trend as "up" | "down" | "stable",
-      })),
-      errors: lead.errors.map((e) => ({
-        type: e.type as AuditResult["errors"][0]["type"],
-        category: e.category,
-        description: e.description,
-        suggestion: e.suggestion,
-        priority: e.priority as AuditResult["errors"][0]["priority"],
-      })),
-      recommendations: lead.recommendations.map((r) => ({
-        title: r.title,
-        description: r.description,
-        difficulty: r.difficulty as AuditResult["recommendations"][0]["difficulty"],
-        impact: r.impact as AuditResult["recommendations"][0]["impact"],
-        time: r.time,
-      })),
-      competitors: lead.competitors.map((c) => ({
-        domain: c.domain,
-        position: c.position,
-      })),
-      lighthouse: (lead.auditResult as Record<string, unknown>)?.lighthouse as AuditResult["lighthouse"],
-    };
+    if (!lead.pdfReport) {
+      return NextResponse.json(
+        { error: "El PDF aún no se ha generado. Inténtalo de nuevo en unos minutos." },
+        { status: 404 }
+      );
+    }
 
-    // Generar PDF (dynamic import para evitar error de build con puppeteer)
-    const { generateAuditPDF } = await import("@/lib/pdfGenerator");
-    const pdfBuffer = await generateAuditPDF(result);
-
-    const domain = lead.url.replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0] || "informe";
+    const domain = lead.url
+      .replace(/^https?:\/\//, "")
+      .replace(/^www\./, "")
+      .split("/")[0] || "informe";
     const filename = `auditaseo-${domain}-${new Date().toISOString().split("T")[0]}.pdf`;
 
-    return new NextResponse(new Uint8Array(pdfBuffer), {
+    return new NextResponse(new Uint8Array(lead.pdfReport), {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
-        "Content-Length": pdfBuffer.length.toString(),
+        "Content-Length": lead.pdfReport.length.toString(),
       },
     });
   } catch (error) {
     console.error("[API] GET /api/audit/pdf error:", error);
     return NextResponse.json(
-      { error: "Error generando el PDF" },
+      { error: "Error sirviendo el PDF" },
       { status: 500 }
     );
   }
