@@ -1,8 +1,9 @@
 /**
- * Panel de Administración — Protegido con autenticación básica.
+ * Panel de Administración — Protegido con HTTP Basic Auth via middleware.
  *
  * Ruta: /admin
- * Auth: Basic Auth (usuario/contraseña en variables de entorno)
+ * Auth: Basic Auth — el navegador muestra el diálogo nativo de login.
+ *       Usuario: admin / Contraseña: admin123 (por defecto)
  */
 
 import { headers } from "next/headers";
@@ -20,85 +21,9 @@ import {
   Download,
   Mail,
   MailOpen,
-  Lock,
 } from "lucide-react";
 
-// --- Autenticación básica ---
-function checkAuth(): { ok: boolean; user?: string } {
-  try {
-    const headersList = headers();
-    const authHeader = headersList.get("authorization");
-
-    if (!authHeader?.startsWith("Basic ")) return { ok: false };
-
-    const base64 = authHeader.slice(6);
-    const decoded = Buffer.from(base64, "base64").toString();
-    const [user, password] = decoded.split(":");
-
-    const adminUser = process.env.ADMIN_USER || "admin";
-    const adminPass = process.env.ADMIN_PASSWORD || "admin123";
-
-    return { ok: user === adminUser && password === adminPass, user };
-  } catch {
-    return { ok: false };
-  }
-}
-
 export default async function AdminPage() {
-  const auth = checkAuth();
-
-  // Login form cuando no está autenticado
-  if (!auth.ok) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-muted/30">
-        <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm text-center space-y-6">
-          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-            <Lock className="w-8 h-8 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-primary">Panel de Administración</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Acceso restringido. Usa tus credenciales para entrar.
-            </p>
-          </div>
-          <form className="space-y-3 text-left">
-            <div>
-              <label className="block text-sm font-medium mb-1">Usuario</label>
-              <input
-                type="text"
-                name="username"
-                className="w-full px-3 py-2 border rounded-lg text-sm"
-                placeholder="admin"
-                autoComplete="username"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Contraseña</label>
-              <input
-                type="password"
-                name="password"
-                className="w-full px-3 py-2 border rounded-lg text-sm"
-                placeholder="••••••••"
-                autoComplete="current-password"
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-primary text-white py-2.5 rounded-lg font-medium hover:bg-primary-light transition"
-            >
-              Entrar
-            </button>
-          </form>
-          <p className="text-xs text-muted-foreground">
-            Este login usa HTTP Basic Auth nativo del navegador. Si no funciona,
-            visita <code className="bg-muted px-1 rounded">http://admin:admin123@localhost:2500/admin</code>
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // --- Autenticado: cargar datos ---
   const [
     totalLeads, completedAudits, pendingAudits, conversions,
     emailsSent, emailsOpened, recentLeads,
