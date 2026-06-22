@@ -65,7 +65,9 @@ export async function sendAuditReportEmail(
     </a>
   </div>
 
-  <p style="color: #6b7280; font-size: 14px;">También puedes descargar el PDF adjunto para compartirlo con tu equipo.</p>
+      <p style="color: #6b7280; font-size: 14px;">
+        <a href="${pdfUrl}" style="color: #10b981;">📥 Descargar el PDF</a> para compartirlo con tu equipo.
+      </p>
 
   <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
     <p style="margin-bottom: 5px;"><strong>¿Quieres ir más allá?</strong></p>
@@ -243,9 +245,18 @@ export async function sendScheduledEmail(
   let success = false;
 
   switch (type) {
-    case "audit_report":
-      success = await sendAuditReportEmail(email, informeUrl, "", domain, 0);
+    case "audit_report": {
+      // Obtener score real y construir URL del PDF desde la DB
+      const lead = await prisma.lead.findUnique({
+        where: { id: leadId },
+        select: { score: true },
+      });
+      const score = lead?.score ?? 0;
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const pdfUrl = `${baseUrl}/api/audit/pdf/${leadId}`;
+      success = await sendAuditReportEmail(email, informeUrl, pdfUrl, domain, score);
       break;
+    }
     case "follow_up_3":
       success = await sendFollowUp3Email(email, informeUrl, domain);
       break;
